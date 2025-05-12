@@ -1,0 +1,17 @@
+-- SHOW THE EMPLOYEES HIERARCHY BY DISPLAYING EACH EMPLOYEES'S LEVEL
+-- ANCHOR QUERY
+WITH RECURSIVE CTE_EMPL_HIERARCHY AS(
+
+SELECT employeeNumber,lastName, firstName, reportsTo,
+1 AS Level
+FROM EMPLOYEES
+WHERE reportsTo IS NULL
+UNION ALL
+SELECT 
+e.employeeNumber, e.lastName, e.firstName, e.reportsTo,
+Level +1
+FROM EMPLOYEES AS e
+INNER JOIN CTE_EMPL_HIERARCHY che
+ON e.reportsTo=che.employeeNumber)
+-- MAIN QUERY
+SELECT * FROM CTE_EMPL_HIERARCHY;
