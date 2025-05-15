@@ -1,0 +1,59 @@
+SELECT * FROM CUSTOMERS; 
+
+SELECT * FROM PAYMENTS;
+SELECT FIRST_VALUE(paymentdate) OVER(ORDER BY paymentdate) ,
+LAST_VALUE(PAYMENTDATE) OVER(ORDER BY PAYMENTDATE)FROM payments;
+
+SELECT LEAD(AMOUNT,1) OVER(PARTITION BY customerNumber ORDER BY paymentdate) as leadvalue,lag(AMOUNT,1) OVER(PARTITION BY customerNumber ORDER BY paymentdate) as lagvalue, amount, customerNumber,paymentdate
+from payments;
+SELECT lag(AMOUNT,1) OVER(PARTITION BY customerNumber ORDER BY paymentdate),amount, customerNumber,paymentdate
+from payments;
+
+-- TIME SERIES ANALYSIS--
+-- LETS DO MONTH OVER MONTH ANALYSIS PAYMENT
+
+-- finding a previous month value
+SELECT  MONTH(PAYMENTDATE) AS MNT, SUM(AMOUNT) AS CURRENTMONTHSALES,
+LAG(SUM(AMOUNT)) OVER(ORDER BY MONTH(PAYMENTDATE) )AS PREVIOUSMONTHSALES
+FROM PAYMENTS
+WHERE YEAR(PAYMENTDATE)='2004'
+GROUP BY MNT;
+
+-- LETS DO NEXT MONTH SALES
+SELECT  MONTH(PAYMENTDATE) AS MNT, SUM(AMOUNT) AS CURRENTMONTHSALES,
+LEAD(SUM(AMOUNT)) OVER(ORDER BY MONTH(PAYMENTDATE) )AS NEXTMONTHSALES
+FROM PAYMENTS
+WHERE YEAR(PAYMENTDATE)='2004'
+GROUP BY MNT;
+
+-- substract the sales from previous month to current month and get the percentage
+select  *,currentmonthsales-previousmonthsales as mom_change,ROUND(CAST((currentmonthsales-previousmonthsales) AS FLOAT)/PREVIOUSMONTHSALES *100,2) from (
+SELECT  MONTH(PAYMENTDATE) AS MNT, SUM(AMOUNT) AS CURRENTMONTHSALES,
+lag(SUM(AMOUNT)) OVER(ORDER BY MONTH(PAYMENTDATE) )AS previousmonthsales
+FROM PAYMENTS
+WHERE YEAR(PAYMENTDATE)='2004'
+GROUP BY MNT) t;
+
+
+select  *,currentmonthsales-previousmonthsales as mom_change,ROUND(CAST((currentmonthsales-previousmonthsales) AS FLOAT)/PREVIOUSMONTHSALES *100,2) from (
+SELECT  MONTH(PAYMENTDATE) AS MNT, SUM(AMOUNT) AS CURRENTMONTHSALES,
+LEAD(SUM(AMOUNT)) OVER(ORDER BY MONTH(PAYMENTDATE) )AS previousmonthsales
+FROM PAYMENTS
+WHERE YEAR(PAYMENTDATE)='2004'
+GROUP BY MNT) t;
+
+-- LETS ANALYSE CUSTOMER RETENTION (CUSTOMERLOYALTY)
+-- RANK THE CUSTOMERBASED ON THE AVERAGE DAYS BETWEEN THEIR ORDERS
+select customerNumber, AVG(DIFFDAYS), RANK() OVER(ORDER BY  COALESCE(AVG(DIFFDAYS),9999)) RNK from (SELECT customerNumber, paymentdate,LEAD(paymentdate) OVER(PARTITION BY customerNumber ORDER BY paymentDate) nextorder,
+DATEDIFF(LEAD(paymentdate) OVER(PARTITION BY customerNumber ORDER BY paymentDate), paymentdate) AS DIFFDAYS
+from payments
+ORDER BY customerNumbeR )t
+GROUP BY CUSTOMERNUMBER ;
+
+-- LETS SELECT THE LOWEST AND HIGHEST PAYMENT MADE MY A customerNumber
+SELECT customerNumber, amount,FIRST_VALUE(amount) OVER(PARTITION BY customerNumber order by amount) 'Minimum amount',
+LAST_VALUE(amount) OVER(PARTITION BY customerNumber order by amount ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS 'Maximum amount'  
+FROM payments
+;
+
+;
